@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fake News Detektív</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Montserrat:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="game-viewport">
+      <header class="top-strip">
+        <h1 class="brand">Fake News Detektív</h1>
+        <p class="news-status" id="newsStatus" aria-live="polite"></p>
+      </header>
+
+      <main class="split-screen" id="panels" aria-label="Hírpárok összehasonlítása">
+        <article
+          class="split-half split-half--left split-half--pickable"
+          id="leftPanel"
+          tabindex="0"
+          role="button"
+          aria-label="A bal oldali hír szerintem a valódi"
+        >
+          <div class="split-half__image-layer">
+            <img id="leftImage" alt="" />
+            <div class="split-half__scrim" aria-hidden="true"></div>
+          </div>
+          <div class="source-pill" id="leftSource">FORRÁS: [Rejtett]</div>
+          <p class="floating-summary" id="leftSummary"></p>
+          <div class="reveal-stamp" id="leftOverlay" aria-hidden="true"></div>
+        </article>
+
+        <div class="center-floater" aria-hidden="true">
+          <span class="vs-circle">VS</span>
+        </div>
+
+        <article class="split-half split-half--right" id="rightPanel" aria-label="Jobb oldali hír">
+          <div class="split-half__image-layer">
+            <img id="rightImage" alt="" />
+            <div class="split-half__scrim" aria-hidden="true"></div>
+          </div>
+          <div class="source-pill source-pill--tr" id="rightSource">FORRÁS: [Rejtett]</div>
+          <p class="floating-summary" id="rightSummary"></p>
+          <div class="glass-actions" id="rightGlassActions">
+            <button type="button" class="glass-btn" id="rightTrueBtn" aria-label="A jobb oldali hír igaz">
+              IGAZ
+            </button>
+            <button type="button" class="glass-btn" id="rightFalseBtn" aria-label="A jobb oldali hír hamis">
+              HAMIS
+            </button>
+          </div>
+          <div class="reveal-stamp" id="rightOverlay" aria-hidden="true"></div>
+        </article>
+      </main>
+
+      <div class="score-corner score-corner--bl" id="highScoreDisplay">Rekord: 0</div>
+      <div class="score-corner score-corner--br" id="scoreChip">Pont: 0</div>
+
+      <button type="button" class="next-round-btn" id="nextRoundBtn" disabled>Következő kör</button>
+    </div>
+
+    <script src="./newsService.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
