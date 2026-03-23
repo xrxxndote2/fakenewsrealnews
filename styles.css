@@ -444,6 +444,18 @@ body {
   cursor: not-allowed;
 }
 
+/* —— Language toggle —— */
+.lang-toggle {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  z-index: 60;
+  padding: 0.45rem 0.7rem;
+  min-width: 54px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+}
+
 /* —— Mobil: fel / le osztás —— */
 @media (max-width: 720px) {
   .split-screen {

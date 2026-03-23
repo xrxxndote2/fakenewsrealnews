@@ -385,8 +385,20 @@ function getRoundPair() {
   } while (fake.url === real.url && guard < 25);
 
   return shufflePairSides([
-    { summary: real.summary, source: real.source, url: real.url, isTrue: true },
-    { summary: fake.summary, source: fake.source, url: fake.url, isTrue: false },
+    {
+      summary: real.summary,
+      source: real.source,
+      url: real.url,
+      lang: real.lang || "hu",
+      isTrue: true,
+    },
+    {
+      summary: fake.summary,
+      source: fake.source,
+      url: fake.url,
+      lang: fake.lang || "en",
+      isTrue: false,
+    },
   ]);
 }
 

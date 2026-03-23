@@ -9,14 +9,77 @@ const leftOverlay = document.getElementById("leftOverlay");
 const rightOverlay = document.getElementById("rightOverlay");
 const rightTrueBtn = document.getElementById("rightTrueBtn");
 const rightFalseBtn = document.getElementById("rightFalseBtn");
+const langToggleBtn = document.getElementById("langToggle");
+const brandEl = document.querySelector(".brand");
 
 const HIGH_SCORE_KEY = "fake-news-detektiv-high-score";
+const LANG_KEY = "fake-news-detektiv-lang";
+
+const UI_TEXT = {
+  hu: {
+    brand: "Fake News Detektív",
+    trueStamp: "IGAZ",
+    falseStamp: "HAMIS",
+    nextRound: "Következő kör",
+    hiddenSource: "FORRÁS: [Rejtett]",
+    sourcePrefix: "FORRÁS: ",
+    statusUpdatedPrefix: "Frissítve: ",
+    translating: "Fordítás alatt…",
+    errorLeft: "Hiba: a hírszolgáltatás nem töltődött be.",
+    errorRight: "Ellenőrizd, hogy a newsService.js fájl elérhető.",
+    noNewsLeft:
+      "Nem sikerült friss híreket betölteni (vagy nincs elég aktuális cikk a kiválasztott hírcsatornákon).",
+    noNewsRight:
+      "Internetkapcsolat és rss2json elérés szükséges. Próbáld újratölteni az oldalt később.",
+  },
+  en: {
+    brand: "Fake News Detective",
+    trueStamp: "TRUE",
+    falseStamp: "FALSE",
+    nextRound: "Next round",
+    hiddenSource: "SOURCE: [Hidden]",
+    sourcePrefix: "SOURCE: ",
+    statusUpdatedPrefix: "Updated: ",
+    translating: "Translating…",
+    errorLeft: "Error: news service did not load.",
+    errorRight: "Check that newsService.js is available.",
+    noNewsLeft:
+      "Could not load fresh news (or there are not enough recent items in the selected feeds).",
+    noNewsRight:
+      "Internet connection and rss2json access are required. Try reloading later.",
+  },
+};
 
 let score = 0;
 let highScore = 0;
 let revealed = false;
 let currentRound = null;
 let imageLoadGeneration = 0;
+let displayLang = "hu";
+let translateGeneration = 0;
+
+function safeGetLocalStorage(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetLocalStorage(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // private mode / quota
+  }
+}
+
+function initLanguage() {
+  const saved = safeGetLocalStorage(LANG_KEY);
+  if (saved === "en" || saved === "hu") {
+    displayLang = saved;
+  }
+}
 
 function loadHighScore() {
   try {
@@ -37,10 +100,12 @@ function persistHighScore() {
 
 function updateScoreDisplays() {
   if (highScoreEl) {
-    highScoreEl.textContent = `Rekord: ${highScore}`;
+    highScoreEl.textContent =
+      displayLang === "hu" ? `Rekord: ${highScore}` : `High score: ${highScore}`;
   }
   if (scoreChip) {
-    scoreChip.textContent = `Pont: ${score}`;
+    scoreChip.textContent =
+      displayLang === "hu" ? `Pont: ${score}` : `Score: ${score}`;
   }
 }
 
@@ -87,19 +152,22 @@ function renderRound() {
   const rightImageEl = document.getElementById("rightImage");
   const leftWrap = leftCard.querySelector(".split-half__image-layer");
   const rightWrap = rightCard.querySelector(".split-half__image-layer");
+  const leftSummaryEl = document.getElementById("leftSummary");
+  const rightSummaryEl = document.getElementById("rightSummary");
 
   leftImageEl.removeAttribute("src");
   rightImageEl.removeAttribute("src");
   leftWrap.classList.add("is-loading");
   rightWrap.classList.add("is-loading");
 
-  document.getElementById("leftSummary").textContent = leftStory.summary;
-  leftSource.textContent = "FORRÁS: [Rejtett]";
+  leftSummaryEl.textContent = leftStory.summary;
+  rightSummaryEl.textContent = rightStory.summary;
+
+  leftSource.textContent = UI_TEXT[displayLang].hiddenSource;
   leftOverlay.textContent = "";
   leftOverlay.setAttribute("aria-hidden", "true");
 
-  document.getElementById("rightSummary").textContent = rightStory.summary;
-  rightSource.textContent = "FORRÁS: [Rejtett]";
+  rightSource.textContent = UI_TEXT[displayLang].hiddenSource;
   rightOverlay.textContent = "";
   rightOverlay.setAttribute("aria-hidden", "true");
 
@@ -111,6 +179,9 @@ function renderRound() {
   nextRoundBtn.disabled = true;
   setGlassButtonsDisabled(false);
   updateScoreDisplays();
+
+  // Ha angol a nézet, automatikusan lefordítjuk a szöveget (RSS-ből jövő nyelvtől függetlenül).
+  void updateDisplayedSummaries();
 }
 
 async function loadRoundImagesFromArticles() {
@@ -172,16 +243,16 @@ function revealCards() {
     card.classList.add("revealed", "locked");
     if (story.isTrue) {
       card.classList.add("true");
-      overlayEl.textContent = "IGAZ";
+      overlayEl.textContent = UI_TEXT[displayLang].trueStamp;
     } else {
       card.classList.add("false");
-      overlayEl.textContent = "HAMIS";
+      overlayEl.textContent = UI_TEXT[displayLang].falseStamp;
     }
     overlayEl.setAttribute("aria-hidden", "false");
 
     sourceEl.textContent = "";
     const label = document.createElement("span");
-    label.textContent = "FORRÁS: ";
+    label.textContent = UI_TEXT[displayLang].sourcePrefix;
     const link = document.createElement("a");
     link.href = story.url;
     link.textContent = story.source;
@@ -220,14 +291,15 @@ function updateNewsStatusLine() {
   }
   const st = window.NewsService.getLiveStatus();
   if (st.lastRefreshAt) {
-    const t = new Date(st.lastRefreshAt).toLocaleString("hu-HU", {
+    const locale = displayLang === "hu" ? "hu-HU" : "en-US";
+    const t = new Date(st.lastRefreshAt).toLocaleString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
-    el.textContent = `Frissítve: ${t}`;
+    el.textContent = `${UI_TEXT[displayLang].statusUpdatedPrefix}${t}`;
   } else {
     el.textContent = "";
   }
@@ -236,9 +308,9 @@ function updateNewsStatusLine() {
 function startNewRound() {
   if (!window.NewsService || typeof window.NewsService.getRoundPair !== "function") {
     document.getElementById("leftSummary").textContent =
-      "Hiba: a hírszolgáltatás nem töltődött be.";
+      UI_TEXT[displayLang].errorLeft;
     document.getElementById("rightSummary").textContent =
-      "Ellenőrizd, hogy a newsService.js fájl elérhető.";
+      UI_TEXT[displayLang].errorRight;
     setGlassButtonsDisabled(true);
     return;
   }
@@ -246,9 +318,9 @@ function startNewRound() {
   currentRound = window.NewsService.getRoundPair();
   if (!currentRound) {
     document.getElementById("leftSummary").textContent =
-      "Nem sikerült friss híreket betölteni (vagy nincs elég aktuális cikk a kiválasztott hírcsatornákon).";
+      UI_TEXT[displayLang].noNewsLeft;
     document.getElementById("rightSummary").textContent =
-      "Internetkapcsolat és rss2json elérés szükséges. Próbáld újratölteni az oldalt később.";
+      UI_TEXT[displayLang].noNewsRight;
     updateNewsStatusLine();
     nextRoundBtn.disabled = false;
     setGlassButtonsDisabled(true);
@@ -262,6 +334,157 @@ function startNewRound() {
 
 loadHighScore();
 updateScoreDisplays();
+
+function setUiLanguage(lang) {
+  if (lang !== "hu" && lang !== "en") {
+    return;
+  }
+  displayLang = lang;
+  safeSetLocalStorage(LANG_KEY, lang);
+
+  if (langToggleBtn) {
+    langToggleBtn.textContent = lang;
+  }
+  if (brandEl) {
+    brandEl.textContent = UI_TEXT[displayLang].brand;
+  }
+  if (nextRoundBtn) {
+    nextRoundBtn.textContent = UI_TEXT[displayLang].nextRound;
+  }
+  if (rightTrueBtn) {
+    rightTrueBtn.textContent = UI_TEXT[displayLang].trueStamp;
+    rightTrueBtn.setAttribute(
+      "aria-label",
+      `A jobb oldali hír ${displayLang === "hu" ? "igaz" : "true"}`
+    );
+  }
+  if (rightFalseBtn) {
+    rightFalseBtn.textContent = UI_TEXT[displayLang].falseStamp;
+    rightFalseBtn.setAttribute(
+      "aria-label",
+      `A jobb oldali hír ${displayLang === "hu" ? "hamis" : "false"}`
+    );
+  }
+
+  // Rekord/pont + stílusos UI elemek azonnali frissítése.
+  updateScoreDisplays();
+  updateNewsStatusLine();
+
+  if (currentRound) {
+    // Ha már felfedtük, szinkronizáljuk a bélyeget és a forrás címkéjét.
+    if (revealed) {
+      currentRound.forEach((story, idx) => {
+        const sourceEl = idx === 0 ? leftSource : rightSource;
+        const overlayEl = idx === 0 ? leftOverlay : rightOverlay;
+        overlayEl.textContent = story.isTrue
+          ? UI_TEXT[displayLang].trueStamp
+          : UI_TEXT[displayLang].falseStamp;
+        overlayEl.setAttribute("aria-hidden", "false");
+
+        sourceEl.textContent = "";
+        const label = document.createElement("span");
+        label.textContent = UI_TEXT[displayLang].sourcePrefix;
+        const link = document.createElement("a");
+        link.href = story.url;
+        link.textContent = story.source;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        sourceEl.append(label, link);
+      });
+    } else {
+      leftSource.textContent = UI_TEXT[displayLang].hiddenSource;
+      rightSource.textContent = UI_TEXT[displayLang].hiddenSource;
+    }
+
+    // A lebegő összefoglalók automatikus fordítása.
+    void updateDisplayedSummaries();
+  }
+}
+
+function getStoryLang(story) {
+  return story?.lang === "en" || story?.lang === "hu" ? story.lang : "hu";
+}
+
+async function translateText(text, sourceLang, targetLang) {
+  if (!text || typeof text !== "string") {
+    return text;
+  }
+  if (sourceLang === targetLang) {
+    return text;
+  }
+
+  const cacheKey = `fake-news-detektiv-translate-v1:${sourceLang}:${targetLang}:${hashString(
+    text
+  )}`;
+  const cached = safeGetLocalStorage(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 12000);
+  try {
+    // CORS-barát, ingyenes fordító endpoint; a válasz tipikusan responseData.translatedText mezőt tartalmaz.
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+      text
+    )}&langpair=${sourceLang}|${targetLang}`;
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      return text;
+    }
+    const data = await res.json();
+    const translated = data?.responseData?.translatedText;
+    if (typeof translated !== "string" || translated.trim().length === 0) {
+      return text;
+    }
+    safeSetLocalStorage(cacheKey, translated);
+    return translated;
+  } catch {
+    return text;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+async function updateDisplayedSummaries() {
+  if (!currentRound) {
+    return;
+  }
+
+  const gen = ++translateGeneration;
+  const [leftStory, rightStory] = currentRound;
+
+  const leftSummaryEl = document.getElementById("leftSummary");
+  const rightSummaryEl = document.getElementById("rightSummary");
+  if (!leftSummaryEl || !rightSummaryEl) {
+    return;
+  }
+
+  const leftSourceLang = getStoryLang(leftStory);
+  const rightSourceLang = getStoryLang(rightStory);
+
+  const leftNeeds = leftSourceLang !== displayLang;
+  const rightNeeds = rightSourceLang !== displayLang;
+
+  if (leftNeeds) {
+    leftSummaryEl.textContent = UI_TEXT[displayLang].translating;
+  }
+  if (rightNeeds) {
+    rightSummaryEl.textContent = UI_TEXT[displayLang].translating;
+  }
+
+  const [leftTranslated, rightTranslated] = await Promise.all([
+    translateText(leftStory.summary, leftSourceLang, displayLang),
+    translateText(rightStory.summary, rightSourceLang, displayLang),
+  ]);
+
+  if (gen !== translateGeneration) {
+    return;
+  }
+
+  leftSummaryEl.textContent = leftTranslated || leftStory.summary;
+  rightSummaryEl.textContent = rightTranslated || rightStory.summary;
+}
 
 leftCard.addEventListener("click", () => handleGuess(0));
 
@@ -302,6 +525,15 @@ async function bootstrap() {
     await window.NewsService.whenReady();
   }
   startNewRound();
+}
+
+initLanguage();
+setUiLanguage(displayLang);
+
+if (langToggleBtn) {
+  langToggleBtn.addEventListener("click", () => {
+    setUiLanguage(displayLang === "hu" ? "en" : "hu");
+  });
 }
 
 bootstrap();
